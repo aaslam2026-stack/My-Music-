@@ -34,23 +34,16 @@ const CODE_MESSAGES = {
   500: "Suno API server error.",
 };
 
-export async function suno(path, { method = "GET", body } = {}) {
-  const key = apiKey();
-  if (!key) {
-    return { ok: false, status: 500, error: "Server is missing SUNO_API_KEY. Add it in Netlify → Site configuration → Environment variables." };
-  }
+// Primary host from docs.sunoapi.org, plus the alternate host listed in the OpenAPI spec.
+const HOSTS = [SUNO_BASE, "https://apibox.erweima.ai"];
+
+async function call(host, path, method, body, key) {
+  const headers = { Authorization: `Bearer ${key}`, Accept: "application/json" };
+  if (body) headers["Content-Type"] = "application/json";
   let res;
   try {
-    res = await fetch(SUNO_BASE + path, {
-      method,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch (e) {
+    res = await fetch(host + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch {
     return { ok: false, status: 502, error: "Could not reach sunoapi.org." };
   }
   let payload;
@@ -64,6 +57,22 @@ export async function suno(path, { method = "GET", body } = {}) {
     return { ok: false, status: code >= 400 && code < 600 ? code : 502, error: payload?.msg || CODE_MESSAGES[code] || "Request failed.", code };
   }
   return { ok: true, data: payload.data };
+}
+
+export async function suno(path, { method = "GET", body } = {}) {
+  const key = apiKey();
+  if (!key) {
+    return { ok: false, status: 500, error: "Server is missing SUNO_API_KEY. Add it in Netlify → Site configuration → Environment variables." };
+  }
+  let r;
+  for (const host of HOSTS) {
+    r = await call(host, path, method, body, key);
+    if (r.ok || r.code !== 401) return r;
+  }
+  // Both hosts rejected the key: say which key is loaded (last 4 chars only) to help diagnose.
+  r.error = `sunoapi.org rejected the API key (ending in …${key.slice(-4)}, ${key.length} characters). ` +
+    "Copy the key again from sunoapi.org → API Key page, update SUNO_API_KEY in Netlify, and redeploy.";
+  return r;
 }
 
 export function callbackUrl(req) {
