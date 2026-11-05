@@ -10,8 +10,15 @@ export function json(body, status = 200) {
   });
 }
 
+// Accept a few common spellings and strip stray spaces/quotes pasted into Netlify.
+const KEY_NAMES = ["SUNO_API_KEY", "SUNOAPI_KEY", "SUNO_KEY", "SUNO_API_TOKEN", "API_KEY"];
+
 export function apiKey() {
-  return process.env.SUNO_API_KEY || "";
+  for (const name of KEY_NAMES) {
+    const v = (process.env[name] || "").trim().replace(/^["']|["']$/g, "").replace(/^Bearer\s+/i, "");
+    if (v) return v;
+  }
+  return "";
 }
 
 // Friendly messages for the documented sunoapi.org status codes.
