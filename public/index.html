@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Music — AI Song Studio</title>
+  <meta name="description" content="Turn an idea into a full song with AI." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">♪</span> My Music</div>
+    <div class="credits" id="credits" title="Remaining sunoapi.org credits">Credits: <strong>…</strong></div>
+  </header>
+
+  <main class="layout">
+    <section class="panel composer">
+      <h1>Create a song</h1>
+      <p class="sub">Describe an idea, pick a vibe, and get two full tracks in about a minute.</p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-mode="simple" role="tab" aria-selected="true">Simple</button>
+        <button class="tab" data-mode="custom" role="tab" aria-selected="false">Custom</button>
+      </div>
+
+      <form id="form" novalidate>
+        <!-- SIMPLE MODE -->
+        <div class="mode simple-only">
+          <label for="prompt">Song description</label>
+          <textarea id="prompt" maxlength="3000" rows="4" placeholder="An upbeat summer anthem about road-tripping with friends along the coast"></textarea>
+          <div class="hint"><span id="promptCount">0</span>/3000</div>
+        </div>
+
+        <!-- CUSTOM MODE -->
+        <div class="mode custom-only" hidden>
+          <label for="title">Title <span class="opt">optional</span></label>
+          <input id="title" maxlength="80" placeholder="Midnight Drive" />
+
+          <div class="row-between">
+            <label for="lyrics">Lyrics</label>
+            <button type="button" class="link-btn" id="aiLyricsBtn">✨ Write lyrics with AI</button>
+          </div>
+          <textarea id="lyrics" maxlength="5000" rows="9" placeholder="[Verse]&#10;City lights are fading slow...&#10;&#10;[Chorus]&#10;..."></textarea>
+          <div class="hint"><span id="lyricsCount">0</span>/5000 · Use tags like [Verse], [Chorus], [Bridge]</div>
+        </div>
+
+        <label for="style">Style</label>
+        <input id="style" maxlength="1000" placeholder="e.g. indie pop, warm synths, female vocals, 110 bpm" />
+        <div class="chips" id="styleChips"></div>
+
+        <div class="toggles">
+          <label class="switch">
+            <input type="checkbox" id="instrumental" />
+            <span class="slider"></span>
+            Instrumental (no vocals)
+          </label>
+        </div>
+
+        <details class="advanced custom-only" hidden>
+          <summary>Advanced settings</summary>
+          <div class="grid2">
+            <div>
+              <label for="vocalGender">Vocal</label>
+              <select id="vocalGender">
+                <option value="">Any</option>
+                <option value="f">Female</option>
+                <option value="m">Male</option>
+              </select>
+            </div>
+            <div>
+              <label for="duration">Length (sec) <span class="opt">10–360</span></label>
+              <input id="duration" type="number" min="10" max="360" placeholder="auto" />
+            </div>
+          </div>
+          <label for="negativeTags">Avoid these styles <span class="opt">optional</span></label>
+          <input id="negativeTags" maxlength="1000" placeholder="heavy metal, distorted guitars" />
+
+          <label for="styleWeight">Style adherence <output id="styleWeightOut">0.50</output></label>
+          <input id="styleWeight" type="range" min="0" max="1" step="0.05" value="0.5" />
+
+          <label for="weirdness">Creativity / weirdness <output id="weirdnessOut">0.50</output></label>
+          <input id="weirdness" type="range" min="0" max="1" step="0.05" value="0.5" />
+
+          <label for="variety">Variety <output id="varietyOut">Normal</output></label>
+          <input id="variety" type="range" min="0" max="4" step="1" value="1" />
+        </details>
+
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="V6" selected>V6 — best quality, natural vocals (recommended)</option>
+          <option value="V6_WILD">V6 Wild — bolder, more experimental</option>
+          <option value="V6_MINI">V6 Mini — fastest</option>
+        </select>
+
+        <div class="error" id="error" role="alert" hidden></div>
+
+        <button type="submit" class="primary" id="submitBtn">
+          <span class="btn-label">Generate music</span>
+        </button>
+      </form>
+    </section>
+
+    <section class="panel results">
+      <div class="row-between">
+        <h2>Your library</h2>
+        <button class="link-btn" id="clearBtn" type="button">Clear</button>
+      </div>
+      <div id="jobs"></div>
+      <div class="empty" id="empty">
+        <div class="empty-icon">🎧</div>
+        <p>Your songs will appear here. Each request creates two variations.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- AI lyrics dialog -->
+  <dialog id="lyricsDialog">
+    <form method="dialog" class="dialog-body" id="lyricsForm">
+      <h3>Write lyrics with AI</h3>
+      <label for="lyricsIdea">What should the song be about?</label>
+      <input id="lyricsIdea" maxlength="200" placeholder="A love letter to rainy Sunday mornings" />
+      <div id="lyricsOptions" class="lyrics-options"></div>
+      <div class="error" id="lyricsError" hidden></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="ghost">Close</button>
+        <button type="button" class="primary small" id="lyricsGo">Generate</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="foot">Generated files are kept by the provider for 14 days — download the ones you love.</footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
